@@ -11,7 +11,7 @@ pycrab.filter_row(
     output_path=r"save/save.csv",  # output path
     sep=list(b',')[0],  # delimiter
     col=0,  # column index
-    cond="apple"  # condtion,
+    cond="apple",  # condtion
     is_exac=True  # exact filter
 )
 
