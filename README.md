@@ -11,7 +11,8 @@ pycrab.filter_row(
     output_path=r"save/save.csv",  # output path
     sep=list(b',')[0],  # delimiter
     col=0,  # column index
-    cond="apple"  # condtion
+    cond="apple"  # condtion,
+    is_exac=True  # exact filter
 )
 
 # connect mysql
@@ -19,8 +20,7 @@ pycrab.conn_sql(
     url="mysql://root:password@localhost/database",
     url_sql="mysql://root:password@localhost/database",
     company_name="project_name",
-    save_path=r"E:\Desktop\test_data\test",
-    is_exac=True
+    save_path=r"E:\Desktop\test_data\test"
 )
 ```
 
