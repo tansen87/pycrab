@@ -13,46 +13,42 @@ use pyo3::{prelude::*, wrap_pyfunction};
 
 
 #[pyfunction]
-pub fn filter_row(csv_path: &str, output_path: &str, sep: u8, col: usize, cond: &str) -> PyResult<()> {
-    // open the input CSV file
+pub fn filter_row(csv_path: &str, output_path: &str, sep: u8, col: usize, cond: &str, is_exac: bool) -> PyResult<()> {
     let mut csv_reader = ReaderBuilder::new()
         .has_headers(false)
         .delimiter(sep)
         .from_path(csv_path)
         .unwrap();
 
-    // open the output CSV file
     let mut csv_writer = WriterBuilder::new()
         .has_headers(false)
         .from_path(output_path)
         .unwrap();
 
-    // read headers
     let headers = csv_reader.headers().unwrap().clone();
     csv_writer.write_record(&headers).unwrap();
 
-    // iterate over each record in the input CSV file
-    for result in csv_reader.records() {
-        let record = result.unwrap();
-        // check if the col field contains the cond
-        if record.get(col).unwrap().contains(cond) {
-            // write the record to the output CSV file
-            csv_writer.write_record(&record).unwrap();
+    if is_exac {
+        for result in csv_reader.records() {
+            let record  = result.unwrap();
+            if record.get(col) == Some(cond) {
+                csv_writer.write_record(&record).unwrap();
+            }
+        }
+    } else {
+        for result in csv_reader.records() {
+            let record = result.unwrap();
+            if record.get(col).unwrap().contains(cond) {
+                csv_writer.write_record(&record).unwrap();
+            }
         }
     }
-
-    // flush the output CSV file to disk
     csv_writer.flush()?;
     Ok(())
-    }
+}
 
 #[pyfunction]
 pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, col: usize) -> PyResult<()> {
-    /*
-        Multiple filtering criteria -> 1 CSV file
-    */
-
-    // read txt file
     let mut txt = File::open(txt_path)?;
     let mut contents = String::new();
     txt.read_to_string(&mut contents)?;
@@ -61,13 +57,11 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
         arr.push(line.to_string());
     }
 
-    // define writer
     let mut csv_writer = WriterBuilder::new()
         .has_headers(false)
         .from_path(output_path)
         .unwrap();
 
-    // read csv file
     let csv_file = File::open(csv_path)?;
     let reader = BufReader::new(csv_file);
     let mut csv_reader = ReaderBuilder::new()
@@ -75,14 +69,11 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
         .delimiter(sep)
         .from_reader(reader);
 
-    // read headers
     let headers = csv_reader.headers().unwrap().clone();
     csv_writer.write_record(&headers).unwrap();
 
-    // progressbar
     let pb = ProgressBar::new_spinner();
 
-    // filter
     for result in csv_reader.records() {
         let record = result.unwrap();
         if record.get(col).map_or(false, |s| arr.iter().any(|a| s.contains(a))) {
@@ -90,6 +81,7 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
         }
         pb.inc(1);
     }
+    
     pb.finish_with_message("done.");
     csv_writer.flush()?;
     Ok(())
