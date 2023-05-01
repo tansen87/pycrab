@@ -19,7 +19,8 @@ pycrab.conn_sql(
     url="mysql://root:password@localhost/database",
     url_sql="mysql://root:password@localhost/database",
     company_name="project_name",
-    save_path=r"E:\Desktop\test_data\test"
+    save_path=r"E:\Desktop\test_data\test",
+    is_exac=True
 )
 ```
 
