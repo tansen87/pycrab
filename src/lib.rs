@@ -112,6 +112,47 @@ pub fn merge_csv(folder_path: &str, output_path: &str) -> PyResult<()> {
     Ok(())
 }
 
+#[pyfunction]
+pub fn split_csv(csv_path: &str, save_path: &str, row_cnt: i32) -> PyResult<()> {
+    let file_path = Path::new(csv_path);
+    let file_name = file_path.file_stem().unwrap().to_str().unwrap();
+    // let file_name = file_path.file_name().unwrap().to_str().unwrap();
+    // let extension = file_path.extension().unwrap().to_str().unwrap();
+
+    let mut csv_reader = ReaderBuilder::new()
+        .has_headers(false)
+        .from_path(csv_path).unwrap();
+
+    let mut csv_writer = WriterBuilder::new()
+        .has_headers(false)
+        .from_path(format!("{}/{}_1.csv", save_path, file_name)).unwrap();
+
+    let headers = csv_reader.headers().unwrap().clone();
+    csv_writer.write_record(&headers).unwrap();
+
+    let mut row_count = 0;
+    let mut file_count = 1;
+
+    for result in csv_reader.records() {
+        let record = result.unwrap();
+        csv_writer.write_record(&record).unwrap();
+
+        row_count += 1;
+
+        if row_count == row_cnt {
+            csv_writer.flush()?;
+            row_count = 0;
+            file_count += 1;
+            csv_writer = WriterBuilder::new()
+                .has_headers(false)
+                .from_path(format!("{}/{}_{}.csv", save_path, file_name, file_count)).unwrap();
+            csv_writer.write_record(&headers).unwrap();
+        }
+    }
+    csv_writer.flush()?;
+    Ok(())
+}
+
 async fn conn_mysql(url: &str, url_sql: &str, company_name: &str, save_path: &str) -> Result<(), Box<dyn Error>> {
     let pool_q_code = mysql::Pool::new(url).unwrap();
     let mut conn = pool_q_code.get_conn().unwrap();
@@ -298,6 +339,7 @@ fn pycrab(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(filter_row, m)?)?;
     m.add_function(wrap_pyfunction!(filter_rows, m)?)?;
     m.add_function(wrap_pyfunction!(merge_csv, m)?)?;
+    m.add_function(wrap_pyfunction!(split_csv, m)?)?;
     m.add_function(wrap_pyfunction!(conn_sql, m)?)?;
     Ok(())
 }
