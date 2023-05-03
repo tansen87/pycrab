@@ -96,7 +96,6 @@ pub fn merge_csv(folder_path: &str, output_path: &str, sep: u8) -> PyResult<()> 
     for entry in read_dir(dir_path)? {
         let file_path = entry?.path();
         if file_path.is_file() && file_path.extension().unwrap_or_default() == "csv" {
-            // let mut reader = Reader::from_path(&file_path).unwrap();
             let mut csv_reader = ReaderBuilder::new()
                 .has_headers(false)
                 .delimiter(sep)
