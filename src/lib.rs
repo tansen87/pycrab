@@ -8,7 +8,7 @@ use std::{
 use sqlx::{MySqlPool, query, Row};
 use mysql::prelude::Queryable;
 use indicatif::ProgressBar;
-use csv::{WriterBuilder, ReaderBuilder, Writer, Reader};
+use csv::{WriterBuilder, ReaderBuilder, Writer};
 use pyo3::{prelude::*, wrap_pyfunction};
 
 
@@ -88,7 +88,7 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
 }
 
 #[pyfunction]
-pub fn merge_csv(folder_path: &str, output_path: &str) -> PyResult<()> {
+pub fn merge_csv(folder_path: &str, output_path: &str, sep: u8) -> PyResult<()> {
     let dir_path =  Path::new(folder_path);
     let out_path = Path::new(output_path);
     let mut csv_writer = Writer::from_path(out_path).unwrap();
@@ -96,13 +96,20 @@ pub fn merge_csv(folder_path: &str, output_path: &str) -> PyResult<()> {
     for entry in read_dir(dir_path)? {
         let file_path = entry?.path();
         if file_path.is_file() && file_path.extension().unwrap_or_default() == "csv" {
-            let mut reader = Reader::from_path(&file_path).unwrap();
+            // let mut reader = Reader::from_path(&file_path).unwrap();
+            let mut csv_reader = ReaderBuilder::new()
+                .has_headers(false)
+                .delimiter(sep)
+                .from_path(file_path)
+                .unwrap();
+
             if !header_written {
-                let header = reader.headers().unwrap().clone();
+                let header = csv_reader.headers().unwrap().clone();
                 csv_writer.write_record(header.iter()).unwrap();
                 header_written = true;
             }
-            for result in reader.records() {
+
+            for result in csv_reader.records() {
                 let record = result.unwrap();
                 csv_writer.write_record(record.iter()).unwrap();
             }
@@ -113,7 +120,7 @@ pub fn merge_csv(folder_path: &str, output_path: &str) -> PyResult<()> {
 }
 
 #[pyfunction]
-pub fn split_csv(csv_path: &str, save_path: &str, row_cnt: i32) -> PyResult<()> {
+pub fn split_csv(csv_path: &str, save_path: &str, sep: u8, row_cnt: i32) -> PyResult<()> {
     let file_path = Path::new(csv_path);
     let file_name = file_path.file_stem().unwrap().to_str().unwrap();
     // let file_name = file_path.file_name().unwrap().to_str().unwrap();
@@ -121,6 +128,7 @@ pub fn split_csv(csv_path: &str, save_path: &str, row_cnt: i32) -> PyResult<()> 
 
     let mut csv_reader = ReaderBuilder::new()
         .has_headers(false)
+        .delimiter(sep)
         .from_path(csv_path).unwrap();
 
     let mut csv_writer = WriterBuilder::new()
@@ -328,7 +336,7 @@ async fn conn_mysql(url: &str, url_sql: &str, company_name: &str, save_path: &st
 }
 
 #[pyfunction]
-pub fn conn_sql(url: &str, url_sql: &str, company_name: &str, save_path: &str) -> PyResult<()> {
+pub fn data4mysql(url: &str, url_sql: &str, company_name: &str, save_path: &str) -> PyResult<()> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(conn_mysql(url, url_sql, company_name, save_path)).unwrap();
     Ok(())
@@ -340,6 +348,6 @@ fn pycrab(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(filter_rows, m)?)?;
     m.add_function(wrap_pyfunction!(merge_csv, m)?)?;
     m.add_function(wrap_pyfunction!(split_csv, m)?)?;
-    m.add_function(wrap_pyfunction!(conn_sql, m)?)?;
+    m.add_function(wrap_pyfunction!(data4mysql, m)?)?;
     Ok(())
 }

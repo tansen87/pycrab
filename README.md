@@ -29,4 +29,5 @@ pycrab.conn_sql(
 - filter_row
 - filter_rows
 - merge_csv
-- conn_mysql
+- split_csv
+- data4mysql
