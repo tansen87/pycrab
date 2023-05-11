@@ -1,25 +1,35 @@
 use std::{
     fs::{File, read_dir},
-    io::{prelude::*, BufReader},
+    io::prelude::*,
     path::Path
 };
 
-use csv::{WriterBuilder, ReaderBuilder};
+use csv::{WriterBuilder, ReaderBuilder, Writer, Reader};
 use pyo3::{prelude::*, wrap_pyfunction};
 
 
-#[pyfunction]
-pub fn filter_row(csv_path: &str, output_path: &str, sep: u8, col: usize, cond: &str, is_exac: bool) -> PyResult<()> {
-    let mut csv_reader = ReaderBuilder::new()
-        .has_headers(false)
+pub fn read_csv(csv_path: &str, sep: u8, headers: bool) -> Reader<File> {
+    let csv_reader = ReaderBuilder::new()
+        .has_headers(headers)
         .delimiter(sep)
         .from_path(csv_path)
         .unwrap();
+    csv_reader
+}
 
-    let mut csv_writer = WriterBuilder::new()
-        .has_headers(false)
+pub fn to_csv(output_path: &str, headers: bool) -> Writer<File> {
+    let csv_writer = WriterBuilder::new()
+        .has_headers(headers)
+        .delimiter(b'|')
         .from_path(output_path)
         .unwrap();
+    csv_writer
+}
+
+#[pyfunction]
+pub fn filter_row(csv_path: &str, output_path: &str, sep: u8, col: usize, cond: &str, is_exac: bool) -> PyResult<()> {
+    let mut csv_reader = read_csv(csv_path, sep, false);
+    let mut csv_writer = to_csv(output_path, false);
 
     let headers = csv_reader.headers().unwrap().clone();
     csv_writer.write_record(&headers).unwrap();
@@ -53,17 +63,8 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
         arr.push(line.to_string());
     }
 
-    let mut csv_writer = WriterBuilder::new()
-        .has_headers(false)
-        .from_path(output_path)
-        .unwrap();
-
-    let csv_file = File::open(csv_path)?;
-    let reader = BufReader::new(csv_file);
-    let mut csv_reader = ReaderBuilder::new()
-        .has_headers(false)
-        .delimiter(sep)
-        .from_reader(reader);
+    let mut csv_writer = to_csv(output_path, false);
+    let mut csv_reader = read_csv(csv_path, sep, false);
 
     let headers = csv_reader.headers().unwrap().clone();
     csv_writer.write_record(&headers).unwrap();
@@ -74,7 +75,6 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
             csv_writer.write_record(&record).unwrap();
         }
     }
-    
     csv_writer.flush()?;
     Ok(())
 }
@@ -82,11 +82,8 @@ pub fn filter_rows(txt_path: &str, csv_path: &str, output_path: &str, sep: u8, c
 #[pyfunction]
 pub fn merge_csv(folder_path: &str, output_path: &str, sep: u8) -> PyResult<()> {
     let dir_path =  Path::new(folder_path);
-    let out_path = Path::new(output_path);
-    let mut csv_writer = WriterBuilder::new()
-        .has_headers(true)
-        .from_path(out_path)
-        .unwrap();
+    let mut csv_writer = to_csv(output_path, true);
+
     let mut header_written = false;
     for entry in read_dir(dir_path)? {
         let file_path = entry?.path();
@@ -118,14 +115,8 @@ pub fn split_csv(csv_path: &str, save_path: &str, sep: u8, row_cnt: i32) -> PyRe
     let file_path = Path::new(csv_path);
     let file_name = file_path.file_stem().unwrap().to_str().unwrap();
 
-    let mut csv_reader = ReaderBuilder::new()
-        .has_headers(true)
-        .delimiter(sep)
-        .from_path(csv_path).unwrap();
-
-    let mut csv_writer = WriterBuilder::new()
-        .has_headers(true)
-        .from_path(format!("{}/{}_1.csv", save_path, file_name)).unwrap();
+    let mut csv_reader = read_csv(csv_path, sep, true);
+    let mut csv_writer = to_csv(format!("{}/{}_1.csv", save_path, file_name).as_str(), true);
 
     let headers = csv_reader.headers().unwrap().clone();
     csv_writer.write_record(&headers).unwrap();
@@ -143,9 +134,7 @@ pub fn split_csv(csv_path: &str, save_path: &str, sep: u8, row_cnt: i32) -> PyRe
             csv_writer.flush()?;
             row_count = 0;
             file_count += 1;
-            csv_writer = WriterBuilder::new()
-                .has_headers(true)
-                .from_path(format!("{}/{}_{}.csv", save_path, file_name, file_count)).unwrap();
+            csv_writer = to_csv(format!("{}/{}_{}.csv", save_path, file_name, file_count).as_str(), true);
             csv_writer.write_record(&headers).unwrap();
         }
     }
