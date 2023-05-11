@@ -15,8 +15,8 @@ pycrab.filter_row(
     is_exac=True  # exact filter
 )
 
-# connect mysql
-pycrab.conn_sql(
+# get data from mysql
+pycrab.data4mysql(
     url="mysql://root:password@localhost/database",
     url_sql="mysql://root:password@localhost/database",
     company_name="project_name",
