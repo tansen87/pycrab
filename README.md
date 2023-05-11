@@ -1,4 +1,4 @@
-# pycrab - v0.1.0
+# pycrab - v0.1.1
 
 #### usage
 
@@ -15,19 +15,9 @@ pycrab.filter_row(
     is_exac=True  # exact filter
 )
 
-# get data from mysql
-pycrab.data4mysql(
-    url="mysql://root:password@localhost/database",
-    url_sql="mysql://root:password@localhost/database",
-    company_name="project_name",
-    save_path=r"E:\Desktop\test_data\test"
-)
-```
-
 #### function
 
 - filter_row
 - filter_rows
 - merge_csv
 - split_csv
-- data4mysql
